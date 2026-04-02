@@ -55,7 +55,7 @@ export function escapeEnvValue(val) {
  */
 export async function detectPublicIp() {
     try {
-        const res = await axios.get('https://api.ipify.org?format=json', { timeout: 5000 });
+        const res = await axios.get('https://api.ipify.org?format=json', { timeout: 2000 });
         return res.data.ip ?? null;
     }
     catch {

@@ -70,12 +70,35 @@ export function registerDomainTools(server, getClient) {
         }
     });
     server.registerTool('get_tld_list', {
-        description: 'Get the full list of supported TLDs (top-level domains) available through Namecheap, with pricing categories. No parameters needed.',
-        inputSchema: {},
-    }, async () => {
+        description: 'Get supported TLDs available through Namecheap. Returns name, category, and registrability. ' +
+            'Use `search` to filter by name substring and `registerable` to show only API-registerable TLDs.',
+        inputSchema: {
+            search: z.string().optional().describe('Filter TLDs by name substring, e.g. "ai" returns .ai, .cloudai, etc. (case-insensitive)'),
+            registerable: z.boolean().optional().describe('When true, only return TLDs registerable via the API'),
+        },
+    }, async ({ search, registerable }) => {
         try {
             const result = await requireClient(getClient).execute('namecheap.domains.getTldList', {});
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            const tldList = result?.['Tlds']?.['Tld'];
+            if (!Array.isArray(tldList)) {
+                return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            }
+            let filtered = tldList;
+            if (search) {
+                const lower = search.toLowerCase();
+                filtered = filtered.filter(t => String(t['@_Name'] ?? '').toLowerCase().includes(lower));
+            }
+            if (registerable) {
+                filtered = filtered.filter(t => t['@_IsApiRegisterable'] === 'true');
+            }
+            const slim = filtered.map(t => ({
+                name: t['@_Name'],
+                subCategory: t['@_SubCategory'],
+                registerable: t['@_IsApiRegisterable'],
+                renewable: t['@_IsApiRenewable'],
+                transferable: t['@_IsApiTransferable'],
+            }));
+            return { content: [{ type: 'text', text: JSON.stringify(slim, null, 2) }] };
         }
         catch (err) {
             return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };

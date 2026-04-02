@@ -63,7 +63,7 @@ export function escapeEnvValue(val: string): string {
  */
 export async function detectPublicIp(): Promise<string | null> {
   try {
-    const res = await axios.get<{ ip: string }>('https://api.ipify.org?format=json', { timeout: 5000 });
+    const res = await axios.get<{ ip: string }>('https://api.ipify.org?format=json', { timeout: 2000 });
     return res.data.ip ?? null;
   } catch {
     return null;

@@ -85,10 +85,14 @@ export function registerSetupTool(
           },
         });
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        const isTimeout = msg.includes('-32001') || msg.toLowerCase().includes('timed out');
         return {
           content: [{
             type: 'text' as const,
-            text: `Setup failed: ${err instanceof Error ? err.message : String(err)}`,
+            text: isTimeout
+              ? 'Setup timed out — the form must be submitted before the request expires. Call `setup` again and submit the form promptly.'
+              : `Setup failed: ${msg}`,
           }],
           isError: true,
         };

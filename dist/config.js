@@ -1,0 +1,35 @@
+import * as path from 'node:path';
+import * as os from 'node:os';
+import dotenv from 'dotenv';
+export const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'namecheap-mcp');
+export const USER_CONFIG_PATH = path.join(USER_CONFIG_DIR, '.env');
+export const UNCONFIGURED_MSG = 'namecheap-mcp is not configured. Call the `setup` tool to get started, ' +
+    'or set NAMECHEAP_API_USER, NAMECHEAP_API_KEY, and NAMECHEAP_CLIENT_IP ' +
+    'environment variables and restart the server.';
+/**
+ * Load credentials from ~/.config/namecheap-mcp/.env then ./.env.
+ * Already-set process.env values take precedence (MCP host env vars win).
+ * Call once at server startup before reading process.env.
+ */
+export function loadConfig() {
+    dotenv.config({ path: USER_CONFIG_PATH });
+    dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+}
+/**
+ * Read credentials from process.env. Returns null if any required var is missing.
+ */
+export function readConfig() {
+    const apiUser = process.env['NAMECHEAP_API_USER'] ?? '';
+    const apiKey = process.env['NAMECHEAP_API_KEY'] ?? '';
+    const clientIp = process.env['NAMECHEAP_CLIENT_IP'] ?? '';
+    if (!apiUser || !apiKey || !clientIp)
+        return null;
+    return {
+        apiUser,
+        apiKey,
+        userName: process.env['NAMECHEAP_USERNAME'] ?? apiUser,
+        clientIp,
+        sandbox: process.env['NAMECHEAP_SANDBOX'] === 'true',
+    };
+}
+//# sourceMappingURL=config.js.map

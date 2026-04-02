@@ -1,17 +1,7 @@
 import * as fs from 'node:fs';
-import axios from 'axios';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { NamecheapClient } from '../client.js';
-import { USER_CONFIG_DIR, USER_CONFIG_PATH } from '../config.js';
-
-async function detectPublicIp(): Promise<string | null> {
-  try {
-    const res = await axios.get<{ ip: string }>('https://api.ipify.org?format=json', { timeout: 5000 });
-    return res.data.ip ?? null;
-  } catch {
-    return null;
-  }
-}
+import { USER_CONFIG_DIR, USER_CONFIG_PATH, detectPublicIp, escapeEnvValue } from '../config.js';
 
 export function registerSetupTool(
   server: McpServer,
@@ -46,50 +36,63 @@ export function registerSetupTool(
         };
       }
 
-      // Already configured?
-      const existing = getClient();
-
-      // Auto-detect public IP for default value
+      const isConfigured = getClient() !== null;
       const detectedIp = await detectPublicIp();
 
-      const result = await server.server.elicitInput({
-        mode: 'form',
-        message:
-          'Enter your Namecheap API credentials. ' +
-          'These are stored locally in ~/.config/namecheap-mcp/.env and are not sent to any AI service.' +
-          (existing ? '\n\nA configuration already exists — submitting will overwrite it.' : ''),
-        requestedSchema: {
-          type: 'object',
-          properties: {
-            apiUser: {
-              type: 'string',
-              title: 'API Username',
-              description: 'Your Namecheap username (same as your account login)',
-              minLength: 1,
+      let result;
+      try {
+        result = await server.server.elicitInput({
+          mode: 'form',
+          message:
+            'Enter your Namecheap API credentials. ' +
+            'These are stored locally in ~/.config/namecheap-mcp/.env and are not sent to any AI service.' +
+            (isConfigured ? '\n\nA configuration already exists — submitting will overwrite it.' : ''),
+          requestedSchema: {
+            type: 'object',
+            properties: {
+              apiUser: {
+                type: 'string',
+                title: 'API Username',
+                description: 'Your Namecheap username (same as your account login)',
+                minLength: 1,
+              },
+              apiKey: {
+                type: 'string',
+                title: 'API Key',
+                description: 'Found at: Account > Profile > Tools > API Access',
+                minLength: 1,
+              },
+              clientIp: {
+                type: 'string',
+                title: 'Whitelisted Client IP',
+                description: 'Your public IP — must be whitelisted in the Namecheap dashboard',
+                ...(detectedIp ? { default: detectedIp } : {}),
+                minLength: 1,
+              },
+              userName: {
+                type: 'string',
+                title: 'Account Username (optional)',
+                description: 'Leave blank if the same as API Username (most users can ignore this)',
+              },
+              sandbox: {
+                type: 'boolean',
+                title: 'Use Sandbox API',
+                description: 'Enable for testing (uses api.sandbox.namecheap.com)',
+                default: false,
+              },
             },
-            apiKey: {
-              type: 'string',
-              title: 'API Key',
-              description: 'Found at: Account > Profile > Tools > API Access',
-              minLength: 1,
-            },
-            clientIp: {
-              type: 'string',
-              title: 'Whitelisted Client IP',
-              description: 'Your public IP — must be whitelisted in the Namecheap dashboard',
-              ...(detectedIp ? { default: detectedIp } : {}),
-              minLength: 1,
-            },
-            sandbox: {
-              type: 'boolean',
-              title: 'Use Sandbox API',
-              description: 'Enable for testing (uses api.sandbox.namecheap.com)',
-              default: false,
-            },
+            required: ['apiUser', 'apiKey', 'clientIp'],
           },
-          required: ['apiUser', 'apiKey', 'clientIp'],
-        },
-      });
+        });
+      } catch (err) {
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `Setup failed: ${err instanceof Error ? err.message : String(err)}`,
+          }],
+          isError: true,
+        };
+      }
 
       if (result.action !== 'accept' || !result.content) {
         return { content: [{ type: 'text' as const, text: 'Setup cancelled.' }] };
@@ -98,33 +101,39 @@ export function registerSetupTool(
       const apiUser = String(result.content['apiUser'] ?? '');
       const apiKey = String(result.content['apiKey'] ?? '');
       const clientIp = String(result.content['clientIp'] ?? '');
+      const userNameInput = String(result.content['userName'] ?? '').trim();
+      const userName = userNameInput || apiUser;
       const sandbox = result.content['sandbox'] === true;
 
       if (!apiUser || !apiKey || !clientIp) {
         return {
-          content: [{ type: 'text' as const, text: 'Setup failed: all of API username, API key, and client IP are required.' }],
+          content: [{ type: 'text' as const, text: 'Setup failed: API username, API key, and client IP are all required.' }],
           isError: true,
         };
       }
 
-      // Write config file with owner-only permissions
+      // Write config file with owner-only permissions; quote all values for safety
       fs.mkdirSync(USER_CONFIG_DIR, { recursive: true });
       const lines = [
-        `NAMECHEAP_API_USER=${apiUser}`,
-        `NAMECHEAP_API_KEY=${apiKey}`,
-        `NAMECHEAP_CLIENT_IP=${clientIp}`,
+        `NAMECHEAP_API_USER=${escapeEnvValue(apiUser)}`,
+        `NAMECHEAP_API_KEY=${escapeEnvValue(apiKey)}`,
+        `NAMECHEAP_CLIENT_IP=${escapeEnvValue(clientIp)}`,
         `NAMECHEAP_SANDBOX=${sandbox ? 'true' : 'false'}`,
       ];
+      if (userName !== apiUser) {
+        lines.splice(3, 0, `NAMECHEAP_USERNAME=${escapeEnvValue(userName)}`);
+      }
       fs.writeFileSync(USER_CONFIG_PATH, lines.join('\n') + '\n', { mode: 0o600 });
 
-      // Update process.env so the live client gets the new values
+      // Update process.env so the live client reflects the new values
       process.env['NAMECHEAP_API_USER'] = apiUser;
       process.env['NAMECHEAP_API_KEY'] = apiKey;
       process.env['NAMECHEAP_CLIENT_IP'] = clientIp;
+      process.env['NAMECHEAP_USERNAME'] = userName;
       process.env['NAMECHEAP_SANDBOX'] = sandbox ? 'true' : 'false';
 
       // Activate the new client immediately — no server restart needed
-      setClient(new NamecheapClient({ apiUser, apiKey, userName: apiUser, clientIp, sandbox }));
+      setClient(new NamecheapClient({ apiUser, apiKey, userName, clientIp, sandbox }));
 
       return {
         content: [{

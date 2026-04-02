@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import { UNCONFIGURED_MSG } from '../config.js';
-function requireClient(getClient) {
-    const c = getClient();
-    if (!c)
-        throw new Error(UNCONFIGURED_MSG);
-    return c;
-}
+import { requireClient } from '../config.js';
 export function registerDnsTools(server, getClient) {
     server.registerTool('get_dns_hosts', {
         description: 'Get all DNS host records for a domain (A, AAAA, CNAME, MX, TXT, NS, etc.).',

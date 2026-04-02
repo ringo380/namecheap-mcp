@@ -2,8 +2,8 @@
 
 import * as readline from 'node:readline';
 import * as fs from 'node:fs';
-import axios from 'axios';
-import { USER_CONFIG_DIR, USER_CONFIG_PATH } from './config.js';
+import * as path from 'node:path';
+import { USER_CONFIG_DIR, USER_CONFIG_PATH, detectPublicIp, escapeEnvValue } from './config.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -48,15 +48,6 @@ async function promptSecret(rl: readline.Interface, question: string): Promise<s
       resolve(val);
     });
   });
-}
-
-async function detectPublicIp(): Promise<string | null> {
-  try {
-    const res = await axios.get<{ ip: string }>('https://api.ipify.org?format=json', { timeout: 5000 });
-    return res.data.ip ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function maskKey(key: string): string {
@@ -132,15 +123,15 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
-    // Write config
+    // Write config — quote all values to safely handle special characters
     fs.mkdirSync(USER_CONFIG_DIR, { recursive: true });
     const lines: string[] = [
-      `NAMECHEAP_API_USER=${apiUser}`,
-      `NAMECHEAP_API_KEY=${apiKey}`,
-      `NAMECHEAP_CLIENT_IP=${clientIp}`,
+      `NAMECHEAP_API_USER=${escapeEnvValue(apiUser)}`,
+      `NAMECHEAP_API_KEY=${escapeEnvValue(apiKey)}`,
+      `NAMECHEAP_CLIENT_IP=${escapeEnvValue(clientIp)}`,
     ];
     if (username !== apiUser) {
-      lines.push(`NAMECHEAP_USERNAME=${username}`);
+      lines.push(`NAMECHEAP_USERNAME=${escapeEnvValue(username)}`);
     }
     lines.push(`NAMECHEAP_SANDBOX=${sandbox ? 'true' : 'false'}`);
     fs.writeFileSync(USER_CONFIG_PATH, lines.join('\n') + '\n', { mode: 0o600 });
@@ -162,10 +153,11 @@ async function main(): Promise<void> {
     process.stderr.write('  claude mcp add namecheap namecheap-mcp\n\n');
     sep();
 
-    // Warn about local .env override
-    if (fs.existsSync('.env')) {
+    // Warn if a .env exists in cwd that might shadow the user config
+    const cwdEnv = path.resolve(process.cwd(), '.env');
+    if (fs.existsSync(cwdEnv)) {
       process.stderr.write(
-        'Note: A .env file exists in the current directory. ' +
+        `Note: A .env file exists at ${cwdEnv}\n` +
         'Its values take precedence over the user config for matching variables.\n\n',
       );
     }

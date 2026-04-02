@@ -1,7 +1,9 @@
 import * as path from 'node:path';
 import * as os from 'node:os';
 import dotenv from 'dotenv';
+import axios from 'axios';
 import type { NamecheapConfig } from './types.js';
+import type { NamecheapClient } from './client.js';
 
 export const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'namecheap-mcp');
 export const USER_CONFIG_PATH = path.join(USER_CONFIG_DIR, '.env');
@@ -36,4 +38,34 @@ export function readConfig(): NamecheapConfig | null {
     clientIp,
     sandbox: process.env['NAMECHEAP_SANDBOX'] === 'true',
   };
+}
+
+/**
+ * Assert that the client is initialized. Throws UNCONFIGURED_MSG if null.
+ * Used at the top of every tool handler that requires credentials.
+ */
+export function requireClient(getClient: () => NamecheapClient | null): NamecheapClient {
+  const c = getClient();
+  if (!c) throw new Error(UNCONFIGURED_MSG);
+  return c;
+}
+
+/**
+ * Escape a value for safe writing into a .env file.
+ * Wraps the value in double quotes and escapes embedded backslashes and quotes.
+ */
+export function escapeEnvValue(val: string): string {
+  return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+}
+
+/**
+ * Detect the caller's public IP via ipify. Returns null on any error.
+ */
+export async function detectPublicIp(): Promise<string | null> {
+  try {
+    const res = await axios.get<{ ip: string }>('https://api.ipify.org?format=json', { timeout: 5000 });
+    return res.data.ip ?? null;
+  } catch {
+    return null;
+  }
 }

@@ -2,13 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NamecheapClient } from '../client.js';
 import { HostRecord } from '../types.js';
-import { UNCONFIGURED_MSG } from '../config.js';
-
-function requireClient(getClient: () => NamecheapClient | null): NamecheapClient {
-  const c = getClient();
-  if (!c) throw new Error(UNCONFIGURED_MSG);
-  return c;
-}
+import { requireClient } from '../config.js';
 
 export function registerDnsTools(server: McpServer, getClient: () => NamecheapClient | null): void {
 

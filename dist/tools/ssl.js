@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import { UNCONFIGURED_MSG } from '../config.js';
-function requireClient(getClient) {
-    const c = getClient();
-    if (!c)
-        throw new Error(UNCONFIGURED_MSG);
-    return c;
-}
+import { requireClient } from '../config.js';
 export function registerSslTools(server, getClient) {
     server.registerTool('list_ssl_certs', {
         description: 'List SSL certificates in your Namecheap account, including status, expiry, and associated domain.',

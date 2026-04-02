@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import { UNCONFIGURED_MSG } from '../config.js';
-function requireClient(getClient) {
-    const c = getClient();
-    if (!c)
-        throw new Error(UNCONFIGURED_MSG);
-    return c;
-}
+import { requireClient } from '../config.js';
 export function registerAccountTools(server, getClient) {
     server.registerTool('get_balances', {
         description: 'Get your Namecheap account balance: available funds, total balance, earned amount, and withdrawable amount.',

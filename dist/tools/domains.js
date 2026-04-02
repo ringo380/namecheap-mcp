@@ -1,11 +1,5 @@
 import { z } from 'zod';
-import { UNCONFIGURED_MSG } from '../config.js';
-function requireClient(getClient) {
-    const c = getClient();
-    if (!c)
-        throw new Error(UNCONFIGURED_MSG);
-    return c;
-}
+import { requireClient } from '../config.js';
 export function registerDomainTools(server, getClient) {
     server.registerTool('check_domains', {
         description: 'Check availability of one or more domains. Pass a comma-separated list like "example.com,example.net". Returns available/unavailable status per domain.',

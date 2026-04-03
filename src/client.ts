@@ -108,9 +108,16 @@ export class NamecheapClient {
       const first = errorList[0];
       const code = String(first?.['@_Number'] ?? 'UNKNOWN');
       let message = String(first?.['#text'] ?? 'Unknown error');
-      if (code === '1011102' || code === '1011150') {
-        message += ' — ensure NAMECHEAP_CLIENT_IP is set to your whitelisted public IP address';
-      }
+      const ERROR_HINTS: Record<string, string> = {
+        '1011102': ' — ensure NAMECHEAP_CLIENT_IP is whitelisted at ap.www.namecheap.com/settings/tools/apiaccess/',
+        '1011150': ' — ensure NAMECHEAP_CLIENT_IP is whitelisted at ap.www.namecheap.com/settings/tools/apiaccess/',
+        '2016166': ' — domain not found in your account',
+        '2019166': ' — domain is locked; use set_registrar_lock to unlock before this operation',
+        '3031510': ' — insufficient account balance',
+        '2030280': ' — invalid nameserver format',
+      };
+      const hint = ERROR_HINTS[code];
+      if (hint) message += hint;
       throw new NamecheapApiError(message, code, command);
     }
 

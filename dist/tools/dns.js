@@ -1,5 +1,30 @@
 import { z } from 'zod';
 import { requireClient } from '../config.js';
+const RECORD_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'URL', 'URL301', 'FRAME'];
+function parseHosts(result) {
+    const r = result?.['DomainDNSGetHostsResult'];
+    const raw = r?.['Host'];
+    return Array.isArray(raw) ? raw : raw ? [raw] : [];
+}
+function cleanHosts(result) {
+    const r = result?.['DomainDNSGetHostsResult'];
+    const raw = r?.['Host'];
+    const list = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    return {
+        domain: r?.['@_Domain'] ?? '',
+        usingNamecheapDns: r?.['@_IsUsingOurDNS'] === 'true',
+        emailType: r?.['@_EmailType'] ?? '',
+        hosts: list.map(h => ({
+            id: h['@_HostId'],
+            name: h['@_Name'],
+            type: h['@_Type'],
+            address: h['@_Address'],
+            ttl: parseInt(h['@_TTL'] ?? '1800', 10),
+            mxPref: parseInt(h['@_MXPref'] ?? '0', 10),
+            active: h['@_IsActive'] === 'true',
+        })),
+    };
+}
 export function registerDnsTools(server, getClient) {
     server.registerTool('get_dns_hosts', {
         description: 'Get all DNS host records for a domain (A, AAAA, CNAME, MX, TXT, NS, etc.).',
@@ -9,7 +34,7 @@ export function registerDnsTools(server, getClient) {
             const client = requireClient(getClient);
             const { sld, tld } = client.splitDomain(domainName);
             const result = await client.execute('namecheap.domains.dns.getHosts', { SLD: sld, TLD: tld });
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            return { content: [{ type: 'text', text: JSON.stringify(cleanHosts(result), null, 2) }] };
         }
         catch (err) {
             return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
@@ -21,8 +46,7 @@ export function registerDnsTools(server, getClient) {
             domainName: z.string().describe('The domain name, e.g. "example.com"'),
             hosts: z.array(z.object({
                 hostName: z.string().describe('Host/subdomain name. Use "@" for root, "*" for wildcard.'),
-                recordType: z.enum(['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'URL', 'URL301', 'FRAME'])
-                    .describe('DNS record type'),
+                recordType: z.enum(RECORD_TYPES).describe('DNS record type'),
                 address: z.string().describe('Record value (IP address, hostname, or URL)'),
                 mxPref: z.number().int().min(0).max(65535).optional().describe('MX priority (required for MX records, 0–65535)'),
                 ttl: z.number().int().optional().describe('TTL in seconds (default: 1800)'),
@@ -35,6 +59,86 @@ export function registerDnsTools(server, getClient) {
             const hostParams = client.flattenHostRecords(hosts);
             const result = await client.execute('namecheap.domains.dns.setHosts', { SLD: sld, TLD: tld, ...hostParams }, 'POST');
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        }
+        catch (err) {
+            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+    });
+    server.registerTool('update_dns_record', {
+        description: 'Safely adds, updates, or removes a single DNS record without affecting other records. ' +
+            'Performs an internal read-modify-write — no need to call get_dns_hosts first. ' +
+            'For upsert: finds a matching record by hostName + recordType (MX records also match on address) and replaces it, or appends if not found. ' +
+            'For delete: removes the matching record.',
+        inputSchema: {
+            domainName: z.string().describe('The domain name, e.g. "example.com"'),
+            operation: z.enum(['upsert', 'delete']).describe('"upsert" to add or update a record, "delete" to remove it'),
+            record: z.object({
+                hostName: z.string().describe('Host/subdomain name. Use "@" for root, "*" for wildcard.'),
+                recordType: z.enum(RECORD_TYPES).describe('DNS record type'),
+                address: z.string().optional().describe('Record value (required for upsert)'),
+                mxPref: z.number().int().min(0).max(65535).optional().describe('MX priority (required for MX upsert)'),
+                ttl: z.number().int().optional().describe('TTL in seconds (default: 1800)'),
+            }).describe('The record to add, update, or delete'),
+        },
+    }, async ({ domainName, operation, record }) => {
+        try {
+            const client = requireClient(getClient);
+            const { sld, tld } = client.splitDomain(domainName);
+            if (operation === 'upsert' && !record.address) {
+                return { content: [{ type: 'text', text: 'Error: address is required for upsert' }], isError: true };
+            }
+            if (operation === 'upsert' && record.recordType === 'MX' && record.mxPref === undefined) {
+                return { content: [{ type: 'text', text: 'Error: mxPref is required for MX upsert' }], isError: true };
+            }
+            // Read current records
+            const existing = await client.execute('namecheap.domains.dns.getHosts', { SLD: sld, TLD: tld });
+            const rawHosts = parseHosts(existing);
+            // Convert raw hosts to HostRecord format
+            const currentRecords = rawHosts.map(h => ({
+                hostName: h['@_Name'] ?? '',
+                recordType: h['@_Type'],
+                address: h['@_Address'] ?? '',
+                mxPref: h['@_MXPref'] ? parseInt(h['@_MXPref'], 10) : undefined,
+                ttl: h['@_TTL'] ? parseInt(h['@_TTL'], 10) : 1800,
+            }));
+            const isMx = record.recordType === 'MX';
+            const matches = (h) => h.hostName === record.hostName &&
+                h.recordType === record.recordType &&
+                (!isMx || h.address === record.address);
+            let updatedRecords;
+            if (operation === 'delete') {
+                updatedRecords = currentRecords.filter(h => !matches(h));
+            }
+            else {
+                const newRecord = {
+                    hostName: record.hostName,
+                    recordType: record.recordType,
+                    address: record.address,
+                    mxPref: record.mxPref,
+                    ttl: record.ttl ?? 1800,
+                };
+                const idx = currentRecords.findIndex(h => matches(h));
+                if (idx >= 0) {
+                    updatedRecords = [...currentRecords];
+                    updatedRecords[idx] = newRecord;
+                }
+                else {
+                    updatedRecords = [...currentRecords, newRecord];
+                }
+            }
+            const hostParams = client.flattenHostRecords(updatedRecords);
+            await client.execute('namecheap.domains.dns.setHosts', { SLD: sld, TLD: tld, ...hostParams }, 'POST');
+            return {
+                content: [{
+                        type: 'text',
+                        text: JSON.stringify({
+                            operation,
+                            domain: domainName,
+                            record: { hostName: record.hostName, type: record.recordType },
+                            totalRecords: updatedRecords.length,
+                        }, null, 2),
+                    }],
+            };
         }
         catch (err) {
             return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };

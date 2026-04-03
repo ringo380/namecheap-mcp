@@ -117,6 +117,22 @@ export function registerSetupTool(server, getClient, setClient) {
         process.env['NAMECHEAP_CLIENT_IP'] = clientIp;
         process.env['NAMECHEAP_USERNAME'] = userName;
         process.env['NAMECHEAP_SANDBOX'] = sandbox ? 'true' : 'false';
+        // Validate credentials before activating the client
+        try {
+            await new NamecheapClient({ apiUser, apiKey, userName, clientIp, sandbox })
+                .execute('namecheap.users.getBalances', {});
+        }
+        catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return {
+                content: [{
+                        type: 'text',
+                        text: `Credentials saved to ${USER_CONFIG_PATH}, but validation failed: ${msg}\n\n` +
+                            `Fix the issue and call \`setup\` again, or verify your API key and whitelisted IP at ap.www.namecheap.com/settings/tools/apiaccess/`,
+                    }],
+                isError: true,
+            };
+        }
         // Activate the new client immediately — no server restart needed
         setClient(new NamecheapClient({ apiUser, apiKey, userName, clientIp, sandbox }));
         return {

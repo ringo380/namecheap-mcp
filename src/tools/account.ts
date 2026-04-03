@@ -14,7 +14,16 @@ export function registerAccountTools(server: McpServer, getClient: () => Nameche
     async () => {
       try {
         const result = await requireClient(getClient).execute('namecheap.users.getBalances', {});
-        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        const r = (result as Record<string, Record<string, string>>)?.['UserGetBalancesResult'] ?? {};
+        const clean = {
+          currency: r['@_Currency'] ?? '',
+          availableBalance: parseFloat(r['@_AvailableBalance'] ?? '0'),
+          accountBalance: parseFloat(r['@_AccountBalance'] ?? '0'),
+          earnedAmount: parseFloat(r['@_EarnedAmount'] ?? '0'),
+          withdrawableAmount: parseFloat(r['@_WithdrawableAmount'] ?? '0'),
+          fundsRequiredForAutoRenew: parseFloat(r['@_FundsRequiredForAutoRenew'] ?? '0'),
+        };
+        return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
       } catch (err) {
         return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
       }

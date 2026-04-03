@@ -118,9 +118,9 @@ export function registerSetupTool(server, getClient, setClient) {
         process.env['NAMECHEAP_USERNAME'] = userName;
         process.env['NAMECHEAP_SANDBOX'] = sandbox ? 'true' : 'false';
         // Validate credentials before activating the client
+        const newClient = new NamecheapClient({ apiUser, apiKey, userName, clientIp, sandbox });
         try {
-            await new NamecheapClient({ apiUser, apiKey, userName, clientIp, sandbox })
-                .execute('namecheap.users.getBalances', {});
+            await newClient.execute('namecheap.users.getBalances', {});
         }
         catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
@@ -134,7 +134,7 @@ export function registerSetupTool(server, getClient, setClient) {
             };
         }
         // Activate the new client immediately — no server restart needed
-        setClient(new NamecheapClient({ apiUser, apiKey, userName, clientIp, sandbox }));
+        setClient(newClient);
         return {
             content: [{
                     type: 'text',

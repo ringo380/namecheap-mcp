@@ -106,7 +106,7 @@ export function registerDomainTools(server, getClient) {
                 locked: r['@_IsLocked'] === 'true',
                 autoRenew: r['@_AutoRenew'] === 'true',
                 whoisGuard: wg ? {
-                    enabled: wg['@_Enabled'] === 'true',
+                    enabled: wg['@_Enabled'] === 'ENABLED',
                     id: wg['@_ID'],
                     expires: wg['@_ExpiredDate'],
                 } : null,
@@ -184,7 +184,7 @@ export function registerDomainTools(server, getClient) {
         try {
             await requireClient(getClient).execute('namecheap.domains.autoRenew', {
                 DomainName: domainName,
-                flag: autoRenew ? 'true' : 'false',
+                Flag: autoRenew ? 'true' : 'false',
             });
             return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, autoRenew }, null, 2) }] };
         }
@@ -210,6 +210,12 @@ export function registerDomainTools(server, getClient) {
                 };
             }
             const whoisguardId = wg['@_ID'];
+            if (!whoisguardId) {
+                return {
+                    content: [{ type: 'text', text: `WHOIS guard ID missing for ${domainName} — cannot enable/disable.` }],
+                    isError: true,
+                };
+            }
             const command = enable ? 'namecheap.whoisguard.enable' : 'namecheap.whoisguard.disable';
             await client.execute(command, { WhoisguardId: whoisguardId });
             return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, whoisGuard: enable ? 'ENABLED' : 'DISABLED' }, null, 2) }] };

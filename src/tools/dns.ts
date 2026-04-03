@@ -134,11 +134,13 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
           ttl: h['@_TTL'] ? parseInt(h['@_TTL'], 10) : 1800,
         }));
 
-        const isMx = record.recordType === 'MX';
+        // For MX records, also match on address when provided (multiple MX records
+        // with different addresses can share the same hostName + recordType).
+        // When address is omitted on a delete, match all MX records at that hostName.
         const matches = (h: HostRecord) =>
           h.hostName === record.hostName &&
           h.recordType === record.recordType &&
-          (!isMx || h.address === record.address);
+          (record.recordType !== 'MX' || !record.address || h.address === record.address);
 
         let updatedRecords: HostRecord[];
         if (operation === 'delete') {

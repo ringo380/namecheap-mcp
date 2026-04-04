@@ -17,6 +17,7 @@ import { registerDomainTools } from './tools/domains.js';
 import { registerDnsTools } from './tools/dns.js';
 import { registerSslTools } from './tools/ssl.js';
 import { registerAccountTools } from './tools/account.js';
+import { registerTransferTools } from './tools/transfers.js';
 const config = readConfig();
 let clientRef = config ? new NamecheapClient(config) : null;
 const getClient = () => clientRef;
@@ -27,6 +28,7 @@ registerDomainTools(server, getClient);
 registerDnsTools(server, getClient);
 registerSslTools(server, getClient);
 registerAccountTools(server, getClient);
+registerTransferTools(server, getClient);
 const transport = new StdioServerTransport();
 await server.connect(transport);
 //# sourceMappingURL=index.js.map

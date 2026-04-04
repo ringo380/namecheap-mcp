@@ -242,5 +242,196 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
         }
     });
+    server.registerTool('register_domain', {
+        description: 'Register (purchase) a new domain. Requires registrant contact info. ' +
+            'Tech, admin, and billing contacts default to the registrant. ' +
+            'Use check_domains first to confirm availability and pricing.',
+        inputSchema: {
+            domainName: z.string().describe('Domain to register, e.g. "example.com"'),
+            years: z.number().int().min(1).max(10).describe('Registration period in years (1–10)'),
+            firstName: z.string().describe('Registrant first name'),
+            lastName: z.string().describe('Registrant last name'),
+            address1: z.string().describe('Registrant address line 1'),
+            address2: z.string().optional().describe('Registrant address line 2'),
+            city: z.string().describe('Registrant city'),
+            stateProvince: z.string().describe('Registrant state or province'),
+            postalCode: z.string().describe('Registrant postal / ZIP code'),
+            country: z.string().describe('Registrant 2-letter country code, e.g. "US"'),
+            phone: z.string().describe('Registrant phone in +CountryCode.Number format, e.g. "+1.5555551234"'),
+            emailAddress: z.string().describe('Registrant email address'),
+            nameservers: z.string().optional().describe('Comma-separated custom nameservers. Omit to use Namecheap default DNS.'),
+            addWhoisGuard: z.boolean().optional().describe('Add free WHOIS guard privacy if available (default: true)'),
+            organizationName: z.string().optional().describe('Organization name (leave blank for individual registrants)'),
+        },
+    }, async ({ domainName, years, firstName, lastName, address1, address2, city, stateProvince, postalCode, country, phone, emailAddress, nameservers, addWhoisGuard, organizationName }) => {
+        try {
+            const client = requireClient(getClient);
+            const buildContact = (prefix) => ({
+                [`${prefix}FirstName`]: firstName,
+                [`${prefix}LastName`]: lastName,
+                [`${prefix}OrganizationName`]: organizationName ?? '',
+                [`${prefix}Address1`]: address1,
+                [`${prefix}Address2`]: address2 ?? '',
+                [`${prefix}City`]: city,
+                [`${prefix}StateProvince`]: stateProvince,
+                [`${prefix}PostalCode`]: postalCode,
+                [`${prefix}Country`]: country,
+                [`${prefix}Phone`]: phone,
+                [`${prefix}EmailAddress`]: emailAddress,
+            });
+            const wg = (addWhoisGuard ?? true) ? 'yes' : 'no';
+            const params = {
+                DomainName: domainName,
+                Years: years,
+                ...buildContact('Registrant'),
+                ...buildContact('Tech'),
+                ...buildContact('Admin'),
+                ...buildContact('AuxBilling'),
+                AddFreeWhoisguard: wg,
+                WGEnabled: wg,
+            };
+            if (nameservers)
+                params['Nameservers'] = nameservers;
+            const result = await client.execute('namecheap.domains.create', params);
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        }
+        catch (err) {
+            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+    });
+    server.registerTool('get_domain_contacts', {
+        description: 'Get WHOIS contact information for a domain: registrant, tech, admin, and billing contacts.',
+        inputSchema: { domainName: z.string().describe('The domain name, e.g. "example.com"') },
+    }, async ({ domainName }) => {
+        try {
+            const result = await requireClient(getClient).execute('namecheap.domains.getContacts', { DomainName: domainName });
+            const r = result?.['DomainContactsResult'];
+            if (!r)
+                return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            const extractContact = (raw) => !raw ? null : ({
+                firstName: raw['FirstName'],
+                lastName: raw['LastName'],
+                organization: raw['OrganizationName'],
+                address1: raw['Address1'],
+                address2: raw['Address2'],
+                city: raw['City'],
+                stateProvince: raw['StateProvince'],
+                postalCode: raw['PostalCode'],
+                country: raw['Country'],
+                phone: raw['Phone'],
+                fax: raw['Fax'],
+                email: raw['EmailAddress'],
+            });
+            const clean = {
+                domain: r['@_Domain'],
+                registrant: extractContact(r['Registrant']),
+                tech: extractContact(r['Tech']),
+                admin: extractContact(r['Admin']),
+                billing: extractContact(r['AuxBilling']),
+            };
+            return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
+        }
+        catch (err) {
+            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+    });
+    server.registerTool('set_domain_contacts', {
+        description: 'Update WHOIS contact information for a domain. ' +
+            'All contact types (tech, admin, billing) are set to the provided values. ' +
+            'All contact fields are required by the Namecheap API.',
+        inputSchema: {
+            domainName: z.string().describe('The domain name, e.g. "example.com"'),
+            firstName: z.string().describe('First name'),
+            lastName: z.string().describe('Last name'),
+            address1: z.string().describe('Address line 1'),
+            address2: z.string().optional().describe('Address line 2'),
+            city: z.string().describe('City'),
+            stateProvince: z.string().describe('State or province'),
+            postalCode: z.string().describe('Postal / ZIP code'),
+            country: z.string().describe('2-letter country code, e.g. "US"'),
+            phone: z.string().describe('Phone in +CountryCode.Number format, e.g. "+1.5555551234"'),
+            emailAddress: z.string().describe('Email address'),
+            organizationName: z.string().optional().describe('Organization name'),
+        },
+    }, async ({ domainName, firstName, lastName, address1, address2, city, stateProvince, postalCode, country, phone, emailAddress, organizationName }) => {
+        try {
+            const buildContact = (prefix) => ({
+                [`${prefix}FirstName`]: firstName,
+                [`${prefix}LastName`]: lastName,
+                [`${prefix}OrganizationName`]: organizationName ?? '',
+                [`${prefix}Address1`]: address1,
+                [`${prefix}Address2`]: address2 ?? '',
+                [`${prefix}City`]: city,
+                [`${prefix}StateProvince`]: stateProvince,
+                [`${prefix}PostalCode`]: postalCode,
+                [`${prefix}Country`]: country,
+                [`${prefix}Phone`]: phone,
+                [`${prefix}EmailAddress`]: emailAddress,
+            });
+            const params = {
+                DomainName: domainName,
+                ...buildContact('Registrant'),
+                ...buildContact('Tech'),
+                ...buildContact('Admin'),
+                ...buildContact('AuxBilling'),
+            };
+            const result = await requireClient(getClient).execute('namecheap.domains.setContacts', params);
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        }
+        catch (err) {
+            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+    });
+    server.registerTool('reactivate_domain', {
+        description: 'Reactivate a recently expired domain.',
+        inputSchema: {
+            domainName: z.string().describe('The expired domain name, e.g. "example.com"'),
+            years: z.number().int().min(1).max(10).describe('Number of years to reactivate for'),
+        },
+    }, async ({ domainName, years }) => {
+        try {
+            const result = await requireClient(getClient).execute('namecheap.domains.reactivate', {
+                DomainName: domainName,
+                YearsToAdd: years,
+            });
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        }
+        catch (err) {
+            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+    });
+    server.registerTool('renew_whoisguard', {
+        description: 'Renew WHOIS guard (privacy protection) for a domain. WHOIS guard renewal is separate from domain renewal.',
+        inputSchema: {
+            domainName: z.string().describe('The domain name, e.g. "example.com"'),
+            years: z.number().int().min(1).max(5).describe('Number of years to renew WHOIS guard for (1–5)'),
+        },
+    }, async ({ domainName, years }) => {
+        try {
+            const client = requireClient(getClient);
+            const info = await client.execute('namecheap.domains.getInfo', { DomainName: domainName });
+            const wg = info?.['DomainGetInfoResult']?.['Whoisguard'];
+            if (!wg || wg['@_Enabled'] === 'NOTPRESENT') {
+                return {
+                    content: [{ type: 'text', text: `No WHOIS guard subscription found for ${domainName}. Purchase WHOIS guard first.` }],
+                    isError: true,
+                };
+            }
+            if (!wg['@_ID']) {
+                return {
+                    content: [{ type: 'text', text: `WHOIS guard ID missing for ${domainName} — cannot renew.` }],
+                    isError: true,
+                };
+            }
+            const result = await client.execute('namecheap.whoisguard.renew', {
+                WhoisguardId: wg['@_ID'],
+                Years: years,
+            });
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+        }
+        catch (err) {
+            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        }
+    });
 }
 //# sourceMappingURL=domains.js.map

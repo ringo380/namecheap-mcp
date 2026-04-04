@@ -4,10 +4,11 @@ A [Model Context Protocol](https://modelcontextprotocol.io) server that wraps th
 
 ## Features
 
-- **Domains** — check availability, list your domains, view domain info, renew
-- **DNS** — read and write host records (A, AAAA, CNAME, MX, TXT, NS), set custom or default nameservers
+- **Domains** — check availability, register, list, renew, reactivate, manage contacts and privacy
+- **DNS** — read and write host records (A, AAAA, CNAME, MX, TXT, NS), safe single-record updates, set custom or default nameservers
 - **Email Forwarding** — get and set per-domain forwarding rules
-- **SSL** — list certificates, purchase new ones
+- **SSL** — list, purchase, activate, reissue certificates; full DCV support (email, HTTP, CNAME)
+- **Transfers** — initiate inbound transfers, track status, list all transfers
 - **Account** — check balances, query pricing
 - **TLD Browser** — search available TLDs with filtering by name or registerability
 - **Interactive Setup** — configure credentials via an in-editor form or a standalone CLI tool
@@ -20,7 +21,9 @@ A [Model Context Protocol](https://modelcontextprotocol.io) server that wraps th
 
 ## Installation
 
-### Via npx (no install needed)
+See [INSTALL.md](./INSTALL.md) for full setup instructions.
+
+### Quick start (npx — no install needed)
 
 ```json
 {
@@ -38,8 +41,6 @@ A [Model Context Protocol](https://modelcontextprotocol.io) server that wraps th
 ```bash
 npm install -g namecheap-mcp
 ```
-
-Then configure:
 
 ```json
 {
@@ -67,11 +68,7 @@ Call the `setup` tool from within Claude Code. A form will appear prompting for 
 namecheap-mcp-setup
 ```
 
-Walks you through each field with your API key input suppressed, then writes the config file.
-
 ### Option 3: Environment variables
-
-Set these in your shell or MCP server config's `env` block:
 
 | Variable | Description |
 |---|---|
@@ -81,8 +78,6 @@ Set these in your shell or MCP server config's `env` block:
 | `NAMECHEAP_USERNAME` | Account username if different from API user (optional) |
 | `NAMECHEAP_SANDBOX` | `true` to use the sandbox API (optional) |
 
-Environment variables take precedence over the config file, which takes precedence over a local `.env` in the working directory.
-
 ## Tools
 
 ### Domains
@@ -91,23 +86,32 @@ Environment variables take precedence over the config file, which takes preceden
 |---|---|
 | `setup` | Configure credentials interactively |
 | `check_domains` | Check availability of one or more domains |
+| `register_domain` | Purchase a new domain |
 | `list_domains` | List all domains in your account (paginated, filterable) |
 | `get_domain_info` | Full details for a single domain |
+| `get_domain_contacts` | Read WHOIS contact info (registrant, tech, admin, billing) |
+| `set_domain_contacts` | Update WHOIS contact info |
 | `renew_domain` | Renew a domain for 1–10 years |
+| `reactivate_domain` | Reactivate a recently expired domain |
 | `get_tld_list` | Browse supported TLDs; filter by name or registerability |
+| `set_domain_autorenew` | Enable or disable auto-renewal |
+| `set_registrar_lock` | Lock or unlock domain transfer |
+| `set_whoisguard` | Enable or disable WHOIS privacy |
+| `renew_whoisguard` | Renew WHOIS privacy protection |
 
 ### DNS
 
 | Tool | Description |
 |---|---|
 | `get_dns_hosts` | Read all DNS records for a domain |
-| `set_dns_hosts` | Replace all DNS records for a domain |
+| `update_dns_record` | Safely add, update, or remove a single DNS record |
+| `set_dns_hosts` | Replace all DNS records for a domain (destructive) |
 | `set_dns_default` | Revert to Namecheap's default nameservers |
 | `set_dns_custom` | Delegate DNS to external nameservers (e.g. Cloudflare) |
 | `get_email_forwarding` | Read email forwarding rules |
-| `set_email_forwarding` | Replace email forwarding rules |
+| `set_email_forwarding` | Replace email forwarding rules (destructive) |
 
-> **Note:** `set_dns_hosts` and `set_email_forwarding` are destructive — they replace all existing records. Call the corresponding `get_` tool first if you need to preserve existing entries.
+> **Note:** `set_dns_hosts` and `set_email_forwarding` replace all existing records. Use `update_dns_record` for safe single-record changes.
 
 ### SSL
 
@@ -115,6 +119,17 @@ Environment variables take precedence over the config file, which takes preceden
 |---|---|
 | `list_ssl_certs` | List SSL certificates in your account |
 | `create_ssl_cert` | Purchase a new SSL certificate |
+| `get_ssl_info` | Get details for a specific certificate |
+| `activate_ssl` | Activate a purchased certificate with a CSR |
+| `reissue_ssl` | Reissue a certificate with a new CSR |
+
+### Transfers
+
+| Tool | Description |
+|---|---|
+| `transfer_domain` | Initiate an inbound domain transfer (requires EPP code) |
+| `get_transfer_status` | Check the status of a pending transfer |
+| `list_transfers` | List all transfers, filterable by status |
 
 ### Account
 
@@ -125,8 +140,7 @@ Environment variables take precedence over the config file, which takes preceden
 
 ## API Notes
 
-- DNS tools (`get_dns_hosts`, `set_dns_hosts`, etc.) accept a full domain name like `example.com` — SLD/TLD splitting is handled internally
-- Email forwarding tools use the full domain name, not SLD+TLD
+- DNS tools accept a full domain name like `example.com` — SLD/TLD splitting is handled internally
 - Error `1011102` means your `NAMECHEAP_CLIENT_IP` is not whitelisted in the Namecheap dashboard
 - Set `NAMECHEAP_SANDBOX=true` to use `api.sandbox.namecheap.com` for testing
 
@@ -141,7 +155,7 @@ npm run build      # compile TypeScript
 npm run type-check # type-check without emitting
 ```
 
-After making changes, run `npm run build && npm install -g .` to update the global install.
+After making changes: `npm run build && npm install -g .` to update the global install.
 
 ## License
 

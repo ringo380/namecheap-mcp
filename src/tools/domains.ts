@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NamecheapClient } from '../client.js';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 
 export function registerDomainTools(server: McpServer, getClient: () => NamecheapClient | null): void {
 
@@ -29,7 +30,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         });
         return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -90,7 +91,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         };
         return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -134,7 +135,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         };
         return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -156,7 +157,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -203,7 +204,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
 
         return { content: [{ type: 'text', text: JSON.stringify(slim, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -225,7 +226,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         });
         return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, autoRenew }, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -263,7 +264,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         await client.execute(command, { WhoisguardId: whoisguardId });
         return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, whoisGuard: enable ? 'ENABLED' : 'DISABLED' }, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -285,7 +286,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         });
         return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, locked }, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -348,7 +349,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         const result = await client.execute('namecheap.domains.create', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -389,7 +390,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         };
         return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -443,7 +444,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         const result = await requireClient(getClient).execute('namecheap.domains.setContacts', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -465,7 +466,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -504,7 +505,7 @@ export function registerDomainTools(server: McpServer, getClient: () => Namechea
         });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );

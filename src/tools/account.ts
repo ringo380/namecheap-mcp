@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NamecheapClient } from '../client.js';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 
 export function registerAccountTools(server: McpServer, getClient: () => NamecheapClient | null): void {
 
@@ -25,7 +26,7 @@ export function registerAccountTools(server: McpServer, getClient: () => Nameche
         };
         return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -57,7 +58,7 @@ export function registerAccountTools(server: McpServer, getClient: () => Nameche
         const result = await requireClient(getClient).execute('namecheap.users.getPricing', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );

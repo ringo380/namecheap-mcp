@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 export function registerAccountTools(server, getClient) {
     server.registerTool('get_balances', {
         description: 'Get your Namecheap account balance: available funds, total balance, earned amount, and withdrawable amount.',
@@ -19,7 +20,7 @@ export function registerAccountTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_pricing', {
@@ -51,7 +52,7 @@ export function registerAccountTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
 }

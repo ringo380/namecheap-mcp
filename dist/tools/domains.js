@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 export function registerDomainTools(server, getClient) {
     server.registerTool('check_domains', {
         description: 'Check availability of one or more domains. Pass a comma-separated list like "example.com,example.net". Returns available/unavailable status per domain.',
@@ -23,7 +24,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('list_domains', {
@@ -79,7 +80,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_domain_info', {
@@ -118,7 +119,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('renew_domain', {
@@ -136,7 +137,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_tld_list', {
@@ -171,7 +172,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(slim, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_domain_autorenew', {
@@ -189,7 +190,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, autoRenew }, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_whoisguard', {
@@ -221,7 +222,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, whoisGuard: enable ? 'ENABLED' : 'DISABLED' }, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_registrar_lock', {
@@ -239,7 +240,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify({ domain: domainName, locked }, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('register_domain', {
@@ -296,7 +297,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_domain_contacts', {
@@ -332,7 +333,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(clean, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_domain_contacts', {
@@ -379,7 +380,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('reactivate_domain', {
@@ -397,7 +398,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('renew_whoisguard', {
@@ -430,7 +431,7 @@ export function registerDomainTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
 }

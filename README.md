@@ -78,6 +78,12 @@ namecheap-mcp-setup
 | `NAMECHEAP_USERNAME` | Account username if different from API user (optional) |
 | `NAMECHEAP_SANDBOX` | `true` to use the sandbox API (optional) |
 
+### Why isn't there an "Authenticate" button in `/mcp`?
+
+Claude Code's native **Authenticate** button in the `/mcp` dialog is part of the MCP 2025-06-18 HTTP+OAuth handshake, which only applies to HTTP-transport servers. namecheap-mcp uses stdio transport, so the button never appears for it. The supported auth flows are the `setup` elicitation tool (Option 1 above), the `namecheap-mcp-setup` CLI (Option 2), or the `/namecheap-mcp:setup` slash command.
+
+To help you tell at a glance whether the server is actually authenticated, namecheap-mcp hides its full tool suite until credentials validate. If you see only `setup` and `auth_status` in `/mcp`, the server is not yet authenticated — run `setup`. Call `auth_status` anytime to see a full diagnostic (error code, whitelisted IP, config file path, and a recommended next action).
+
 ## Tools
 
 ### Domains
@@ -137,6 +143,7 @@ namecheap-mcp-setup
 |---|---|
 | `get_balances` | Account balance and withdrawable amount |
 | `get_pricing` | Pricing for domains, SSL, or Whois Guard |
+| `auth_status` | Diagnose authentication: whether credentials loaded, whether the API accepted them, and the last error with an actionable hint |
 
 ## API Notes
 

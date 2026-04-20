@@ -2,11 +2,14 @@ import * as fs from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { NamecheapClient } from '../client.js';
 import { USER_CONFIG_DIR, USER_CONFIG_PATH, detectPublicIp, escapeEnvValue } from '../config.js';
+import { setAuthState } from '../state.js';
+import { NamecheapApiError } from '../types.js';
 
 export function registerSetupTool(
   server: McpServer,
   getClient: () => NamecheapClient | null,
   setClient: (c: NamecheapClient) => void,
+  onAuthenticated: () => void,
 ): void {
   server.registerTool(
     'setup',
@@ -141,27 +144,41 @@ export function registerSetupTool(
       try {
         await newClient.execute('namecheap.users.getBalances', {});
       } catch (err) {
+        const code = err instanceof NamecheapApiError ? err.code : 'UNKNOWN';
         const msg = err instanceof Error ? err.message : String(err);
+        setAuthState({ ok: false, code, message: msg, checkedAt: Date.now() });
         return {
           content: [{
             type: 'text' as const,
             text:
-              `Credentials saved to ${USER_CONFIG_PATH}, but validation failed: ${msg}\n\n` +
+              `Credentials saved to ${USER_CONFIG_PATH}, but validation failed [${code}]: ${msg}\n\n` +
               `Fix the issue and call \`setup\` again, or verify your API key and whitelisted IP at ap.www.namecheap.com/settings/tools/apiaccess/`,
           }],
+          structuredContent: { errorCode: code, errorMessage: msg, isAuthError: true },
           isError: true,
         };
       }
 
       // Activate the new client immediately — no server restart needed
       setClient(newClient);
+      setAuthState({ ok: true, validatedAt: Date.now() });
+
+      // Register the full tool suite if it wasn't already (first-time setup),
+      // then notify the client that the tool list has changed so /mcp refreshes
+      // without a reconnect.
+      onAuthenticated();
+      try {
+        server.sendToolListChanged();
+      } catch {
+        // Older transports may not support the notification; ignore.
+      }
 
       return {
         content: [{
           type: 'text' as const,
           text:
             `Setup complete! Credentials saved to ${USER_CONFIG_PATH}\n\n` +
-            `Call \`get_balances\` to verify the connection.`,
+            `Call \`get_balances\` to verify the connection, or \`auth_status\` to view validation details.`,
         }],
       };
     },

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 export function registerSslTools(server, getClient) {
     server.registerTool('list_ssl_certs', {
         description: 'List SSL certificates in your Namecheap account, including status, expiry, and associated domain.',
@@ -16,7 +17,7 @@ export function registerSslTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('create_ssl_cert', {
@@ -31,7 +32,7 @@ export function registerSslTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_ssl_info', {
@@ -45,7 +46,7 @@ export function registerSslTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('activate_ssl', {
@@ -97,7 +98,7 @@ export function registerSslTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('reissue_ssl', {
@@ -148,7 +149,7 @@ export function registerSslTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
 }

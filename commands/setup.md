@@ -7,6 +7,8 @@ allowed-tools: ["Bash", "Read", "Write"]
 
 Walk the user through end-to-end setup so they can go from "plugin enabled" to "issuing Namecheap API calls from Claude Code" in one session.
 
+> Note: Claude Code's native "Authenticate" button in the `/mcp` dialog only works for HTTP/OAuth-transport MCP servers (MCP 2025-06-18). namecheap-mcp is stdio, so this command and the `setup` tool are the supported auth flows. If the user sees only `setup` and `auth_status` exposed in `/mcp`, the server is not yet authenticated — run this command. The `auth_status` tool produces a full diagnostic at any time.
+
 ## Pre-flight
 
 1. Confirm an existing config isn't already in place:

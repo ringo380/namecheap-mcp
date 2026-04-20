@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.3.2] — 2026-04-20
+
+### Fixed
+- **Shell env no longer silently shadows `.env` file values** (#4). `loadConfig()` previously relied on `dotenv.config()`, which never overrides existing `process.env` keys and treats empty strings as "already set." A shell that exported `NAMECHEAP_API_KEY=""` (or just one of the three required vars) would leave file values unloaded while `auth_status` reported `user-config` as the source — producing `ready:false` with an empty effective value. `loadConfig()` now does an explicit per-key merge that treats empty strings as unset. Precedence is unchanged: non-empty shell/host env > user-config file > project-local `.env`.
+- **Orphan MCP processes no longer survive stdin close** (#4). `src/index.ts` now installs explicit `stdin` `end`/`close` and `SIGTERM`/`SIGINT`/`SIGHUP` handlers that `process.exit(0)`. `StdioServerTransport` should close on EOF on its own, but the explicit handlers guarantee dead processes cannot accumulate across Claude Code reconnects.
+
+### Added
+- Loud stderr warning on startup when credentials are missing: `[namecheap-mcp] UNCONFIGURED at startup. sources: {...}`. Surfaces the failure immediately instead of waiting for the first tool call.
+
+## [1.3.1] — 2026-04-20
+
+### Added
+- `auth_status` now reports the **source of each credential** (`shell`, `user-config`, `project-env`, or `missing`) and a `splitSources` boolean — exposing the footgun where a stale shell-exported `NAMECHEAP_API_KEY` silently shadows the correct value in `~/.config/namecheap-mcp/.env`. Validation failures that stem from split sources produce a specific hint naming the remediation (unset the shell export or make all three required vars come from the same source).
+
+### Notes
+- This is a diagnostic-only change. No precedence behavior changed: shell/host env still wins over file (dotenv default). The fix replaces a mystery with a visible explanation.
+
+## [1.3.0] — 2026-04-20
+
+### Added
+- `auth_status` tool — reports whether credentials are loaded, whether they were accepted by the Namecheap API, and the last error if any. Returns `structuredContent` with `errorCode`, actionable `hint`, and `recommendedAction`. Use this to diagnose why tools are failing.
+- Startup credential validation — on boot, if credentials are present the server pings `namecheap.users.getBalances` once. If the ping fails (bad key, unwhitelisted IP, etc.) the server records the failure and starts in an unconfigured state instead of silently exposing broken tools.
+- Dynamic `serverInfo.instructions` — the MCP client sees a different description depending on auth state, pointing unconfigured users directly at `setup`.
+
+### Changed
+- **Tool-list gating**: when the server is unconfigured or credentials are invalid, the `/mcp` dialog now shows only two tools (`setup`, `auth_status`) instead of all 32. Once credentials validate, the full tool suite registers and the client receives a `notifications/tools/list_changed` so it refreshes without a reconnect.
+- **Structured error payloads**: all tool catch blocks now return `isError: true` with a `structuredContent` body containing `errorCode`, `command`, `isAuthError`, and `isUnconfigured`. Error messages include the Namecheap error code inline (e.g. `Error [1011102]: ...`) and auth-class failures update `auth_status` in place.
+- `setup` tool now records auth state and fires `sendToolListChanged()` on success so the full tool list appears immediately.
+
+### Notes
+- The MCP protocol's native `/mcp` **Authenticate** button is HTTP/OAuth-transport only (per MCP 2025-06-18). Because namecheap-mcp uses stdio, the supported auth flow is the `setup` tool (elicitation form) or the `/namecheap-mcp:setup` slash command. This release makes that flow much more discoverable.
+
 ## [1.2.1] — 2026-04-20
 
 ### Added

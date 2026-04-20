@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 const RECORD_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'URL', 'URL301', 'FRAME'];
 function parseHosts(result) {
     const r = result?.['DomainDNSGetHostsResult'];
@@ -37,7 +38,7 @@ export function registerDnsTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(cleanHosts(result), null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_dns_hosts', {
@@ -61,7 +62,7 @@ export function registerDnsTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('update_dns_record', {
@@ -143,7 +144,7 @@ export function registerDnsTools(server, getClient) {
             };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_email_forwarding', {
@@ -155,7 +156,7 @@ export function registerDnsTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_email_forwarding', {
@@ -179,7 +180,7 @@ export function registerDnsTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_dns_default', {
@@ -193,7 +194,7 @@ export function registerDnsTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('set_dns_custom', {
@@ -215,7 +216,7 @@ export function registerDnsTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
 }

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 export function registerTransferTools(server, getClient) {
     server.registerTool('transfer_domain', {
         description: 'Transfer a domain from another registrar to Namecheap. ' +
@@ -51,7 +52,7 @@ export function registerTransferTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('get_transfer_status', {
@@ -67,7 +68,7 @@ export function registerTransferTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
     server.registerTool('list_transfers', {
@@ -92,7 +93,7 @@ export function registerTransferTools(server, getClient) {
             return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
         }
         catch (err) {
-            return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+            return toErrorResult(err);
         }
     });
 }

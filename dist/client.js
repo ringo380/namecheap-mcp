@@ -1,6 +1,18 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { NamecheapApiError } from './types.js';
+// Namecheap error codes that indicate an authentication/authorization problem
+// (bad API key, non-whitelisted IP, disabled API access) rather than a
+// business-logic failure. Used to distinguish "credentials broken" from
+// "request malformed" in structured error payloads and auth_status.
+export const AUTH_CODES = new Set([
+    '1011102', // Parameter ApiKey is invalid
+    '1011150', // IP is not in the whitelist / disabled IP
+    '1010102', // Parameter APIUser is invalid
+    '1017', // API Key is invalid or API access has not been enabled
+    '1011101', // Parameter ApiUser is invalid
+    '1050900', // Unknown exceptions (often auth-related)
+]);
 // Tags that can appear 0, 1, or N times — must be forced to arrays
 const ARRAY_TAGS = new Set([
     'DomainCheckResult',

@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NamecheapClient } from '../client.js';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 
 export function registerSslTools(server: McpServer, getClient: () => NamecheapClient | null): void {
 
@@ -22,7 +23,7 @@ export function registerSslTools(server: McpServer, getClient: () => NamecheapCl
         });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -41,7 +42,7 @@ export function registerSslTools(server: McpServer, getClient: () => NamecheapCl
         const result = await requireClient(getClient).execute('namecheap.ssl.create', { Type: type, Years: years });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -59,7 +60,7 @@ export function registerSslTools(server: McpServer, getClient: () => NamecheapCl
         const result = await requireClient(getClient).execute('namecheap.ssl.getInfo', { CertificateID: certificateId });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -114,7 +115,7 @@ export function registerSslTools(server: McpServer, getClient: () => NamecheapCl
         const result = await requireClient(getClient).execute('namecheap.ssl.activate', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -168,7 +169,7 @@ export function registerSslTools(server: McpServer, getClient: () => NamecheapCl
         const result = await requireClient(getClient).execute('namecheap.ssl.reissue', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );

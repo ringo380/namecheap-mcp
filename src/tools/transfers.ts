@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { NamecheapClient } from '../client.js';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 
 export function registerTransferTools(server: McpServer, getClient: () => NamecheapClient | null): void {
 
@@ -60,7 +61,7 @@ export function registerTransferTools(server: McpServer, getClient: () => Namech
         const result = await requireClient(getClient).execute('namecheap.domains.transfer.create', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -80,7 +81,7 @@ export function registerTransferTools(server: McpServer, getClient: () => Namech
         });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -108,7 +109,7 @@ export function registerTransferTools(server: McpServer, getClient: () => Namech
         const result = await requireClient(getClient).execute('namecheap.domains.transfer.getList', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );

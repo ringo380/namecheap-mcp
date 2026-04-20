@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { NamecheapClient } from '../client.js';
 import { HostRecord } from '../types.js';
 import { requireClient } from '../config.js';
+import { toErrorResult } from '../errors.js';
 
 const RECORD_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'URL', 'URL301', 'FRAME'] as const;
 
@@ -49,7 +50,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
         const result = await client.execute('namecheap.domains.dns.getHosts', { SLD: sld, TLD: tld });
         return { content: [{ type: 'text', text: JSON.stringify(cleanHosts(result), null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -84,7 +85,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
         );
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -177,7 +178,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
           }],
         };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -193,7 +194,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
         const result = await requireClient(getClient).execute('namecheap.domains.dns.getEmailForwarding', { DomainName: domainName });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -221,7 +222,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
         const result = await requireClient(getClient).execute('namecheap.domains.dns.setEmailForwarding', params);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -239,7 +240,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
         const result = await client.execute('namecheap.domains.dns.setDefault', { SLD: sld, TLD: tld });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );
@@ -265,7 +266,7 @@ export function registerDnsTools(server: McpServer, getClient: () => NamecheapCl
         });
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+        return toErrorResult(err);
       }
     }
   );

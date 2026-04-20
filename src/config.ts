@@ -1,8 +1,10 @@
 import * as path from 'node:path';
 import * as os from 'node:os';
+import * as fs from 'node:fs';
 import dotenv from 'dotenv';
 import axios from 'axios';
 import type { NamecheapConfig } from './types.js';
+import { NamecheapApiError } from './types.js';
 import type { NamecheapClient } from './client.js';
 
 export const USER_CONFIG_DIR = path.join(os.homedir(), '.config', 'namecheap-mcp');
@@ -13,14 +15,74 @@ export const UNCONFIGURED_MSG =
   'or set NAMECHEAP_API_USER, NAMECHEAP_API_KEY, and NAMECHEAP_CLIENT_IP ' +
   'environment variables and restart the server.';
 
+const ENV_KEYS = [
+  'NAMECHEAP_API_USER',
+  'NAMECHEAP_API_KEY',
+  'NAMECHEAP_CLIENT_IP',
+  'NAMECHEAP_USERNAME',
+  'NAMECHEAP_SANDBOX',
+] as const;
+
+// Snapshot which keys were present in process.env BEFORE loadConfig() runs.
+// Captured at module-load so the import in index.ts runs this before loadConfig().
+// Empty strings are treated as unset here to match loadConfig() precedence —
+// a shell-pre-seeded "" must not shadow a real file value.
+const preDotenvSnapshot: Record<string, boolean> = Object.fromEntries(
+  ENV_KEYS.map((k) => [k, !!process.env[k]?.trim()]),
+);
+
 /**
  * Load credentials from ~/.config/namecheap-mcp/.env then ./.env.
- * Already-set process.env values take precedence (MCP host env vars win).
- * Call once at server startup before reading process.env.
+ * Precedence: non-empty shell/host env > user-config file > project-local .env.
+ * An empty-string process.env value is treated as unset — dotenv's default
+ * behavior (never override existing keys) silently shadowed file values when
+ * the shell exported "" or partial credentials. See issue #4.
  */
 export function loadConfig(): void {
-  dotenv.config({ path: USER_CONFIG_PATH });
-  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+  const userFile = parseEnvFile(USER_CONFIG_PATH);
+  const projectFile = parseEnvFile(path.resolve(process.cwd(), '.env'));
+  for (const key of ENV_KEYS) {
+    const current = process.env[key];
+    if (current && current.trim() !== '') continue;
+    const fallback = userFile[key]?.trim() || projectFile[key]?.trim();
+    if (fallback) process.env[key] = fallback;
+  }
+}
+
+export type CredentialSource = 'shell' | 'user-config' | 'project-env' | 'missing';
+
+function parseEnvFile(filePath: string): Record<string, string> {
+  try {
+    if (!fs.existsSync(filePath)) return {};
+    return dotenv.parse(fs.readFileSync(filePath));
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Determine where each credential came from: shell/host env (captured pre-dotenv),
+ * the user config file, the project-local .env, or missing entirely.
+ * Lets auth_status surface the "split sources" footgun: e.g. shell exports
+ * NAMECHEAP_API_KEY stale while ~/.config/namecheap-mcp/.env has the correct one
+ * — the shell value silently wins because dotenv doesn't override existing env vars.
+ */
+export function getCredentialSources(): Record<string, CredentialSource> {
+  const userFile = parseEnvFile(USER_CONFIG_PATH);
+  const projectFile = parseEnvFile(path.resolve(process.cwd(), '.env'));
+  const result: Record<string, CredentialSource> = {};
+  for (const key of ENV_KEYS) {
+    if (preDotenvSnapshot[key]) {
+      result[key] = 'shell';
+    } else if (userFile[key] !== undefined && userFile[key] !== '') {
+      result[key] = 'user-config';
+    } else if (projectFile[key] !== undefined && projectFile[key] !== '') {
+      result[key] = 'project-env';
+    } else {
+      result[key] = 'missing';
+    }
+  }
+  return result;
 }
 
 /**
@@ -67,5 +129,24 @@ export async function detectPublicIp(): Promise<string | null> {
     return res.data.ip ?? null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Ping the Namecheap API with credentials to confirm they work.
+ * Uses getBalances (cheap, read-only, requires auth).
+ * Returns a structured result; never throws.
+ */
+export async function validateClient(
+  client: NamecheapClient,
+): Promise<{ ok: true } | { ok: false; code: string; message: string }> {
+  try {
+    await client.execute('namecheap.users.getBalances', {});
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof NamecheapApiError) {
+      return { ok: false, code: err.code, message: err.message };
+    }
+    return { ok: false, code: 'UNKNOWN', message: err instanceof Error ? err.message : String(err) };
   }
 }

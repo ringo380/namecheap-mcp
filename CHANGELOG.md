@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1] — 2026-04-20
+
+### Added
+- Claude Code plugin bundling: `.claude-plugin/plugin.json`, `.mcp.json`, `/namecheap-mcp:setup` slash command, and a launcher script that prefers a global `namecheap-mcp` binary and falls back to the bundled `dist/index.js`. Installable via the `robworks-claude-code-plugins` marketplace.
+
+### Fixed
+- Resolved 11 moderate Dependabot advisories by bumping transitive dependencies: `axios` → 1.15.1 (SSRF via NO_PROXY normalization, cloud metadata exfiltration), `follow-redirects` → 1.16.0 (auth header leak on cross-domain redirects), `hono` → 4.12.14 (cookie validation, path traversal, JSX HTML injection, middleware bypass, IP matching), `@hono/node-server` → 1.19.13 (middleware bypass).
+
 ## [1.2.0] — 2026-04-03
 
 ### Added

@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "namecheap-mcp": {
+      "type": "stdio",
+      "command": "${CLAUDE_PLUGIN_ROOT}/hooks/scripts/launch-mcp.sh",
+      "args": [],
+      "env": {
+        "NAMECHEAP_API_USER": "${NAMECHEAP_API_USER:-}",
+        "NAMECHEAP_API_KEY": "${NAMECHEAP_API_KEY:-}",
+        "NAMECHEAP_CLIENT_IP": "${NAMECHEAP_CLIENT_IP:-}",
+        "NAMECHEAP_USERNAME": "${NAMECHEAP_USERNAME:-}",
+        "NAMECHEAP_SANDBOX": "${NAMECHEAP_SANDBOX:-}"
+      }
+    }
+  }
+}

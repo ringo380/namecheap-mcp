@@ -1,0 +1,19 @@
+{
+  "name": "namecheap-mcp",
+  "version": "1.1.0",
+  "description": "Namecheap MCP server bundled as a Claude Code plugin — manage domains, DNS, SSL, transfers, and account from your AI assistant.",
+  "author": {
+    "name": "Ryan Robson"
+  },
+  "homepage": "https://github.com/ringo380/namecheap-mcp",
+  "repository": "https://github.com/ringo380/namecheap-mcp",
+  "license": "MIT",
+  "keywords": [
+    "namecheap",
+    "mcp",
+    "dns",
+    "domains",
+    "ssl",
+    "registrar"
+  ]
+}

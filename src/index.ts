@@ -24,6 +24,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { NamecheapClient } from './client.js';
 import { setAuthState } from './state.js';
+import { VERSION } from './version.js';
 import { registerSetupTool } from './tools/setup.js';
 import { registerAuthStatusTool } from './tools/auth_status.js';
 import { registerDomainTools } from './tools/domains.js';
@@ -48,7 +49,7 @@ const READY_INSTRUCTIONS =
   'verify credentials or `setup` to reconfigure.';
 
 const server = new McpServer(
-  { name: 'namecheap-mcp', version: '1.3.2' },
+  { name: 'namecheap-mcp', version: VERSION },
   { instructions: clientRef ? READY_INSTRUCTIONS : UNCONFIGURED_INSTRUCTIONS },
 );
 

@@ -6,9 +6,23 @@ export interface NamecheapConfig {
   sandbox: boolean;
 }
 
+export type RecordType =
+  | 'A'
+  | 'AAAA'
+  | 'ALIAS'
+  | 'CAA'
+  | 'CNAME'
+  | 'FRAME'
+  | 'MX'
+  | 'MXE'
+  | 'NS'
+  | 'TXT'
+  | 'URL'
+  | 'URL301';
+
 export interface HostRecord {
   hostName: string;
-  recordType: 'A' | 'AAAA' | 'CNAME' | 'MX' | 'TXT' | 'NS' | 'URL' | 'URL301' | 'FRAME';
+  recordType: RecordType | string;
   address: string;
   mxPref?: number;
   ttl?: number;

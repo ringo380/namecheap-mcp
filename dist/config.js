@@ -9,10 +9,17 @@ export const USER_CONFIG_PATH = path.join(USER_CONFIG_DIR, '.env');
 export const UNCONFIGURED_MSG = 'namecheap-mcp is not configured. Call the `setup` tool to get started, ' +
     'or set NAMECHEAP_API_USER, NAMECHEAP_API_KEY, and NAMECHEAP_CLIENT_IP ' +
     'environment variables and restart the server.';
-const ENV_KEYS = [
+// The three credentials that must be present for the client to authenticate.
+// Used by auth_status and the setup split-source hint to detect when values
+// come from different origins (shell vs file). Exported so callers stay in
+// sync — if a key is added here, both tools pick it up automatically.
+export const REQUIRED_CREDENTIAL_KEYS = [
     'NAMECHEAP_API_USER',
     'NAMECHEAP_API_KEY',
     'NAMECHEAP_CLIENT_IP',
+];
+const ENV_KEYS = [
+    ...REQUIRED_CREDENTIAL_KEYS,
     'NAMECHEAP_USERNAME',
     'NAMECHEAP_SANDBOX',
 ];
@@ -111,15 +118,32 @@ export function requireClient(getClient) {
 export function escapeEnvValue(val) {
     return '"' + val.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
 }
+// Cache the detected public IP for a short window so diagnostic tools that
+// rapid-fire auth_status don't each pay the 2s network cost. IP can only
+// change via NAT/VPN/wifi rejoin — events that happen rarely within a
+// single Claude Code session, and 60s staleness is an acceptable tradeoff
+// for a diagnostic surface (users can always call setup to re-detect).
+const IP_CACHE_TTL_MS = 60_000;
+let cachedIp = null;
 /**
  * Detect the caller's public IP via ipify. Returns null on any error.
+ * Result is cached for 60s across calls in the same process.
  */
 export async function detectPublicIp() {
+    const now = Date.now();
+    if (cachedIp && now - cachedIp.at < IP_CACHE_TTL_MS) {
+        return cachedIp.value;
+    }
     try {
         const res = await axios.get('https://api.ipify.org?format=json', { timeout: 2000 });
-        return res.data.ip ?? null;
+        const ip = res.data.ip ?? null;
+        cachedIp = { value: ip, at: now };
+        return ip;
     }
     catch {
+        // Cache the failure too so a down ipify doesn't add 2s latency to
+        // every subsequent auth_status call in the TTL window.
+        cachedIp = { value: null, at: now };
         return null;
     }
 }

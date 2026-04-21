@@ -3,6 +3,8 @@ export declare const AUTH_CODES: ReadonlySet<string>;
 export declare class NamecheapClient {
     private readonly config;
     private readonly baseUrl;
+    private _lastRawResponse;
+    get lastRawResponse(): string | null;
     constructor(config: NamecheapConfig);
     /**
      * Execute a Namecheap API command.

@@ -1,7 +1,6 @@
 import * as fs from 'node:fs';
-import { USER_CONFIG_PATH, getCredentialSources } from '../config.js';
+import { USER_CONFIG_PATH, getCredentialSources, detectPublicIp, REQUIRED_CREDENTIAL_KEYS as REQUIRED_KEYS, } from '../config.js';
 import { getAuthState } from '../state.js';
-const REQUIRED_KEYS = ['NAMECHEAP_API_USER', 'NAMECHEAP_API_KEY', 'NAMECHEAP_CLIENT_IP'];
 export function registerAuthStatusTool(server, getClient) {
     server.registerTool('auth_status', {
         description: 'Report the current authentication status of namecheap-mcp: whether credentials ' +
@@ -16,6 +15,13 @@ export function registerAuthStatusTool(server, getClient) {
         const configFileExists = fs.existsSync(USER_CONFIG_PATH);
         const sources = getCredentialSources();
         const clientIp = process.env['NAMECHEAP_CLIENT_IP'] ?? null;
+        // Detect the caller's current public IP so we can tell the user whether
+        // their configured NAMECHEAP_CLIENT_IP still matches the outbound IP.
+        // Namecheap error 1011102 is ambiguous (bad key OR unwhitelisted IP);
+        // showing both values at once resolves it on the spot. 2s timeout so a
+        // network blip never blocks the auth_status response.
+        const currentPublicIp = await detectPublicIp();
+        const ipMatchesConfigured = currentPublicIp !== null && clientIp !== null && currentPublicIp === clientIp;
         // Detect split-source footgun: required credentials coming from different
         // origins (e.g. API_KEY from shell, USER/CLIENT_IP from user-config) often
         // means a stale shell export is silently shadowing the file's correct value.
@@ -37,6 +43,8 @@ export function registerAuthStatusTool(server, getClient) {
                 NAMECHEAP_CLIENT_IP: clientIp,
                 NAMECHEAP_SANDBOX: process.env['NAMECHEAP_SANDBOX'] === 'true',
             },
+            currentPublicIp,
+            ipMatchesConfigured,
             splitSources,
             lastCheck: new Date(state.ok ? state.validatedAt : state.checkedAt).toISOString(),
         };
@@ -71,6 +79,11 @@ export function registerAuthStatusTool(server, getClient) {
                 hints.push('Error 1011102/1011150 means EITHER the API key is invalid OR the client IP is not whitelisted. ' +
                     'Visit ap.www.namecheap.com/settings/tools/apiaccess/ to verify both: ' +
                     `the key matches what's sent, and the whitelist includes ${clientIp ?? 'your current public IP'}.`);
+            }
+            if (currentPublicIp && clientIp && !ipMatchesConfigured) {
+                hints.push(`Your current public IP (${currentPublicIp}) does not match the configured NAMECHEAP_CLIENT_IP (${clientIp}). ` +
+                    `If your network changed (VPN, new location) since setup, update NAMECHEAP_CLIENT_IP via the setup tool ` +
+                    `and whitelist the new IP at ap.www.namecheap.com/settings/tools/apiaccess/.`);
             }
             if (!configFileExists && sources['NAMECHEAP_API_KEY'] === 'missing') {
                 hints.push('Run the `setup` tool to create ~/.config/namecheap-mcp/.env.');

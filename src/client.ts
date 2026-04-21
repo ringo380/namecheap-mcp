@@ -15,11 +15,18 @@ export const AUTH_CODES: ReadonlySet<string> = new Set([
   '1050900', // Unknown exceptions (often auth-related)
 ]);
 
-// Tags that can appear 0, 1, or N times — must be forced to arrays
+// Tags that can appear 0, 1, or N times — must be forced to arrays.
+// NOTE: Namecheap's getHosts response uses lowercase `<host>` (confirmed by
+// live API capture). Other responses use PascalCase. We list both variants
+// here so any future API response shape using either case works out of the
+// box. Missing a tag here caused the v1.0-1.4.0 wipe bug: `host` (lowercase)
+// was absent, parsing fell through, getHosts silently returned an empty
+// hosts array, and downstream setHosts calls wiped the zone.
 const ARRAY_TAGS = new Set([
   'DomainCheckResult',
   'Domain',
   'Host',
+  'host',
   'EmailForward',
   'SSL',
   'Transfer',
@@ -41,6 +48,12 @@ const parser = new XMLParser({
 
 export class NamecheapClient {
   private readonly baseUrl: string;
+  // Last raw XML body received from the API, per-instance. Used by dns.ts
+  // to dump the response body to stderr when parseGetHostsResponse throws
+  // (gated on NAMECHEAP_DEBUG). MCP serializes tool calls so the race on
+  // this field between calls is acceptable for a diagnostic surface.
+  private _lastRawResponse: string | null = null;
+  get lastRawResponse(): string | null { return this._lastRawResponse; }
 
   constructor(private readonly config: NamecheapConfig) {
     this.baseUrl = config.sandbox
@@ -93,14 +106,21 @@ export class NamecheapClient {
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        if (err.response?.status === 429 && retries < 1) {
-          await sleep(1000);
+        // Exponential backoff on rate-limit: up to 3 retries with 1s/2s/4s
+        // waits (7s total wait cap; 4 HTTP calls total including the initial).
+        // Applies to both GET and POST — the API rate-limits both, and the
+        // previous single-retry behaviour blew past the limit on rapid
+        // multi-record upsert scripts.
+        if (err.response?.status === 429 && retries < 3) {
+          await sleep(1000 * Math.pow(2, retries));
           return this.execute(command, params, method, retries + 1);
         }
         throw new Error(`HTTP error ${err.response?.status ?? 'unknown'}: ${err.message}`);
       }
       throw err;
     }
+
+    this._lastRawResponse = responseXml;
 
     const parsed = parser.parse(responseXml) as {
       ApiResponse?: {

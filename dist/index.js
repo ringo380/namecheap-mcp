@@ -18,6 +18,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { NamecheapClient } from './client.js';
 import { setAuthState } from './state.js';
+import { VERSION } from './version.js';
 import { registerSetupTool } from './tools/setup.js';
 import { registerAuthStatusTool } from './tools/auth_status.js';
 import { registerDomainTools } from './tools/domains.js';
@@ -35,7 +36,7 @@ const UNCONFIGURED_INSTRUCTIONS = 'namecheap-mcp is not yet authenticated. Call 
 const READY_INSTRUCTIONS = 'namecheap-mcp is authenticated. Manage domains, DNS records, SSL certificates, ' +
     'transfers, and account billing via the exposed tools. Call `auth_status` to ' +
     'verify credentials or `setup` to reconfigure.';
-const server = new McpServer({ name: 'namecheap-mcp', version: '1.3.2' }, { instructions: clientRef ? READY_INSTRUCTIONS : UNCONFIGURED_INSTRUCTIONS });
+const server = new McpServer({ name: 'namecheap-mcp', version: VERSION }, { instructions: clientRef ? READY_INSTRUCTIONS : UNCONFIGURED_INSTRUCTIONS });
 // Always register the auth-related tools so the user has a path out of any state.
 let readyToolsRegistered = false;
 function registerReadyTools() {

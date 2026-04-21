@@ -3,6 +3,7 @@ import type { NamecheapClient } from './client.js';
 export declare const USER_CONFIG_DIR: string;
 export declare const USER_CONFIG_PATH: string;
 export declare const UNCONFIGURED_MSG: string;
+export declare const REQUIRED_CREDENTIAL_KEYS: readonly ["NAMECHEAP_API_USER", "NAMECHEAP_API_KEY", "NAMECHEAP_CLIENT_IP"];
 /**
  * Load credentials from ~/.config/namecheap-mcp/.env then ./.env.
  * Precedence: non-empty shell/host env > user-config file > project-local .env.
@@ -36,6 +37,7 @@ export declare function requireClient(getClient: () => NamecheapClient | null): 
 export declare function escapeEnvValue(val: string): string;
 /**
  * Detect the caller's public IP via ipify. Returns null on any error.
+ * Result is cached for 60s across calls in the same process.
  */
 export declare function detectPublicIp(): Promise<string | null>;
 /**

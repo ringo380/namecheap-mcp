@@ -1,9 +1,41 @@
 import * as fs from 'node:fs';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { NamecheapClient } from '../client.js';
-import { USER_CONFIG_DIR, USER_CONFIG_PATH, detectPublicIp, escapeEnvValue } from '../config.js';
+import {
+  USER_CONFIG_DIR,
+  USER_CONFIG_PATH,
+  detectPublicIp,
+  escapeEnvValue,
+  getCredentialSources,
+  REQUIRED_CREDENTIAL_KEYS as REQUIRED_KEYS,
+} from '../config.js';
 import { setAuthState } from '../state.js';
 import { NamecheapApiError } from '../types.js';
+
+// Build a one-paragraph hint listing where each required credential is coming
+// from, when sources are split across shell env and the config file. An empty
+// string means "no split, nothing to warn about".
+function splitSourceHint(): string {
+  const sources = getCredentialSources();
+  const presentSources = new Set(
+    REQUIRED_KEYS.map((k) => sources[k]).filter((s) => s !== 'missing'),
+  );
+  if (presentSources.size <= 1) return '';
+  const shellKeys = REQUIRED_KEYS.filter((k) => sources[k] === 'shell');
+  const fileKeys = REQUIRED_KEYS.filter(
+    (k) => sources[k] === 'user-config' || sources[k] === 'project-env',
+  );
+  if (shellKeys.length === 0 || fileKeys.length === 0) return '';
+  return (
+    `\n\nHEADS UP: your current credentials are split across sources. ` +
+    `${shellKeys.join(', ')} come(s) from a shell/host env export, while ` +
+    `${fileKeys.join(', ')} come(s) from a config file. ` +
+    `Saving here will rewrite the config file, but the shell export will still shadow ` +
+    `any of those vars (dotenv does not override existing env). ` +
+    `If auth still fails after saving, unset the shell export(s) and restart Claude Code ` +
+    `so the MCP re-spawns clean.`
+  );
+}
 
 export function registerSetupTool(
   server: McpServer,
@@ -41,6 +73,7 @@ export function registerSetupTool(
 
       const isConfigured = getClient() !== null;
       const detectedIp = await detectPublicIp();
+      const splitHint = splitSourceHint();
 
       let result;
       try {
@@ -49,7 +82,8 @@ export function registerSetupTool(
           message:
             'Enter your Namecheap API credentials. ' +
             'These are stored locally in ~/.config/namecheap-mcp/.env and are not sent to any AI service.' +
-            (isConfigured ? '\n\nA configuration already exists — submitting will overwrite it.' : ''),
+            (isConfigured ? '\n\nA configuration already exists — submitting will overwrite it.' : '') +
+            splitHint,
           requestedSchema: {
             type: 'object',
             properties: {

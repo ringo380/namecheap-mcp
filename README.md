@@ -109,15 +109,17 @@ To help you tell at a glance whether the server is actually authenticated, namec
 
 | Tool | Description |
 |---|---|
-| `get_dns_hosts` | Read all DNS records for a domain |
-| `update_dns_record` | Safely add, update, or remove a single DNS record |
-| `set_dns_hosts` | Replace all DNS records for a domain (destructive) |
+| `get_dns_hosts` | Read all DNS records for a domain (also writes a local backup snapshot) |
+| `update_dns_record` | Safely add, update, or remove a single DNS record (recommended) |
+| `set_dns_hosts` | Replace all DNS records — **gated** behind `confirmReplaceAll` + `expectedDeletions` |
 | `set_dns_default` | Revert to Namecheap's default nameservers |
 | `set_dns_custom` | Delegate DNS to external nameservers (e.g. Cloudflare) |
 | `get_email_forwarding` | Read email forwarding rules |
-| `set_email_forwarding` | Replace email forwarding rules (destructive) |
+| `set_email_forwarding` | Replace email forwarding rules — gated behind `confirmReplaceAll` |
+| `list_dns_snapshots` | List local DNS zone backups for a domain |
+| `restore_dns_snapshot` | Restore a zone from a local backup snapshot |
 
-> **Note:** `set_dns_hosts` and `set_email_forwarding` replace all existing records. Use `update_dns_record` for safe single-record changes.
+> ⚠️ **DNS zone safety.** The underlying Namecheap `setHosts` API is a full-replacement operation — any record not in the call is deleted. **Use `update_dns_record` for single-record adds/updates/deletes.** Never hand-call `set_dns_hosts` to add a record. Every read and every write produces a local snapshot at `~/.config/namecheap-mcp/snapshots/<domain>__<timestamp>-<rand>.json` (up to 50 per domain), so `list_dns_snapshots` + `restore_dns_snapshot` can recover from any accidental damage.
 
 ### SSL
 

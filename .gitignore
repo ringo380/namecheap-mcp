@@ -7,5 +7,8 @@ CLAUDE.local.md
 .claude/
 memory/
 .browser-pilot/
+.claude-dev-helper/
+.plugin-config/
+.DS_Store
 # Domain-verification/SEO files intentionally kept local
 google*.html

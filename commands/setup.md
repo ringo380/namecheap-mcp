@@ -1,6 +1,7 @@
 ---
 description: Guided first-run setup for the namecheap-mcp server — collect API credentials and write them to the global config.
 allowed-tools: ["Bash", "Read", "Write"]
+disable-model-invocation: true
 ---
 
 # /namecheap-mcp:setup
